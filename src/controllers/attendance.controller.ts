@@ -27,6 +27,21 @@ export async function clockIn(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { latitude, longitude, selfie } = req.body;
 
+    const employee = await prisma.employee.findUnique({
+      where: { id: req.user!.id },
+      select: { role: true },
+    });
+
+    if (employee?.role === 'EMPLOYEE') {
+      const shiftCount = await prisma.shift.count({
+        where: { employeeId: req.user!.id },
+      });
+      if (shiftCount === 0) {
+        res.status(400).json({ error: 'Jadwal kerja Anda belum dikonfigurasi oleh administrator. Silakan hubungi pihak manajemen.' });
+        return;
+      }
+    }
+
     if (latitude === undefined || longitude === undefined) {
       res.status(400).json({ error: 'Latitude and longitude are required' });
       return;

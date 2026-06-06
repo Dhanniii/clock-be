@@ -56,6 +56,7 @@ export async function register(req: Request, res: Response): Promise<void> {
         employeeId: employee.employeeId,
         name: employee.name,
         role: employee.role,
+        hasSchedule: employee.role !== 'EMPLOYEE',
       },
     });
   } catch (err) {
@@ -95,6 +96,14 @@ export async function login(req: Request, res: Response): Promise<void> {
       { expiresIn: JWT_EXPIRES_IN }
     );
 
+    let hasSchedule = true;
+    if (employee.role === 'EMPLOYEE') {
+      const shiftCount = await prisma.shift.count({
+        where: { employeeId: employee.id },
+      });
+      hasSchedule = shiftCount > 0;
+    }
+
     res.status(200).json({
       message: 'Login successful.',
       token,
@@ -103,6 +112,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         employeeId: employee.employeeId,
         name: employee.name,
         role: employee.role,
+        hasSchedule,
       },
     });
   } catch (err) {
@@ -122,6 +132,7 @@ export async function getProfile(req: AuthRequest, res: Response): Promise<void>
         role: true,
         photo: true,
         createdAt: true,
+        email: true,
       },
     });
 
@@ -130,7 +141,20 @@ export async function getProfile(req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    res.status(200).json({ employee });
+    let hasSchedule = true;
+    if (employee.role === 'EMPLOYEE') {
+      const shiftCount = await prisma.shift.count({
+        where: { employeeId: employee.id },
+      });
+      hasSchedule = shiftCount > 0;
+    }
+
+    res.status(200).json({
+      employee: {
+        ...employee,
+        hasSchedule,
+      },
+    });
   } catch (err) {
     console.error('Get profile error:', err);
     res.status(500).json({ error: 'Internal server error.' });
