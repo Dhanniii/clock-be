@@ -125,6 +125,39 @@ export async function getAttendanceHistory(req: AuthRequest, res: Response): Pro
 
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const employee = await prisma.employee.findUnique({
+      where: { id: req.user!.id },
+      select: { createdAt: true },
+    });
+
+    const earliestAttendance = await prisma.attendance.findFirst({
+      where: { employeeId: req.user!.id },
+      orderBy: { date: 'asc' },
+      select: { date: true },
+    });
+
+    const earliestShift = await prisma.shift.findFirst({
+      where: { employeeId: req.user!.id },
+      orderBy: { date: 'asc' },
+      select: { date: true },
+    });
+
+    const hireDate = employee?.createdAt ? new Date(employee.createdAt) : startOfMonth;
+    let earliestActivityDate: Date | null = null;
+    if (earliestAttendance && earliestShift) {
+      earliestActivityDate = earliestAttendance.date < earliestShift.date ? earliestAttendance.date : earliestShift.date;
+    } else if (earliestAttendance) {
+      earliestActivityDate = earliestAttendance.date;
+    } else if (earliestShift) {
+      earliestActivityDate = earliestShift.date;
+    }
+
+    const startReference = earliestActivityDate || hireDate;
+    const loopStartDate = startReference > startOfMonth
+      ? new Date(startReference.getFullYear(), startReference.getMonth(), startReference.getDate())
+      : startOfMonth;
+
     const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
     const toLocalDateString = (date: Date): string => {
@@ -150,12 +183,12 @@ export async function getAttendanceHistory(req: AuthRequest, res: Response): Pro
     yesterday.setDate(yesterday.getDate() - 1);
     yesterday.setHours(23, 59, 59, 999);
 
-    if (startOfMonth <= yesterday) {
+    if (loopStartDate <= yesterday) {
       const shifts = await prisma.shift.findMany({
         where: {
           employeeId: req.user!.id,
           date: {
-            gte: startOfMonth,
+            gte: loopStartDate,
             lte: yesterday,
           },
         },
@@ -168,7 +201,7 @@ export async function getAttendanceHistory(req: AuthRequest, res: Response): Pro
           OR: [
             {
               startDate: { lte: yesterday },
-              endDate: { gte: startOfMonth },
+              endDate: { gte: loopStartDate },
             },
           ],
         },
@@ -189,7 +222,7 @@ export async function getAttendanceHistory(req: AuthRequest, res: Response): Pro
         }
       }
 
-      let current = new Date(startOfMonth);
+      let current = new Date(loopStartDate);
       while (current <= yesterday) {
         const dateStr = toLocalDateString(current);
 
