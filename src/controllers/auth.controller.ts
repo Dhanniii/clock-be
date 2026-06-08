@@ -9,7 +9,7 @@ const JWT_EXPIRES_IN = '7d';
 
 export async function register(req: Request, res: Response): Promise<void> {
   try {
-    const { employeeId, name, password, email, photo } = req.body;
+    const { employeeId, name, password, email, photo, workStartDate } = req.body;
 
     if (!employeeId || !name || !password) {
       res.status(400).json({ error: 'Employee ID, name, and password are required.' });
@@ -39,6 +39,7 @@ export async function register(req: Request, res: Response): Promise<void> {
         password: hashedPassword,
         email: email || null,
         photo: photo || null,
+        workStartDate: workStartDate ? new Date(workStartDate) : undefined,
       },
     });
 
@@ -57,6 +58,7 @@ export async function register(req: Request, res: Response): Promise<void> {
         name: employee.name,
         role: employee.role,
         hasSchedule: employee.role !== 'EMPLOYEE',
+        workStartDate: employee.workStartDate,
       },
     });
   } catch (err) {
@@ -133,6 +135,7 @@ export async function getProfile(req: AuthRequest, res: Response): Promise<void>
         photo: true,
         createdAt: true,
         email: true,
+        workStartDate: true,
       },
     });
 

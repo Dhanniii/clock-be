@@ -22,6 +22,7 @@ export async function getLiveEmployees(req: AuthRequest, res: Response): Promise
         name: true,
         email: true,
         photo: true,
+        workStartDate: true,
         attendances: {
           where: {
             date: todayDate,

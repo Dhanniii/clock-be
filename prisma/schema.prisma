@@ -27,6 +27,7 @@ model Employee {
   photo       String?
   role        Role         @default(EMPLOYEE)
   createdAt   DateTime     @default(now())
+  workStartDate DateTime     @default(now()) @db.Date
   updatedAt   DateTime     @updatedAt
   attendances Attendance[]
   shifts      Shift[]
